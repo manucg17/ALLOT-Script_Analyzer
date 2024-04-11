@@ -128,7 +128,6 @@ class ScriptAnalyzer:
             logging.error(f"Error count: {self.error_count}")  # Log the error count
 
     def add_summary_to_log(self):
-
         summary = "\n\n---------------------------------------------\n"
         # Initialize a variable to check if any issues were found
         issues_found = False
@@ -159,8 +158,18 @@ class ScriptAnalyzer:
                 lines = script_file.readlines()
 
                 first_non_comment_line = None
+                in_multiline_comment = False
                 for line_number, line in enumerate(lines, start=1):
-                    if not line.strip() or line.strip().startswith("//") or line.strip().startswith("/*"):
+                    stripped_line = line.strip()
+                    if not stripped_line:
+                        continue
+                    if stripped_line.startswith("/*"):
+                        in_multiline_comment = True
+                    if in_multiline_comment:
+                        if "*/" in stripped_line:
+                            in_multiline_comment = False
+                        continue
+                    if stripped_line.startswith("//"):
                         continue
                     first_non_comment_line = line_number
                     break
@@ -194,16 +203,26 @@ class ScriptAnalyzer:
 
                 inside_function = False
                 indentation_level = 0
+                in_multiline_comment = False
 
                 for line_number, line in enumerate(lines, start=1):
-                    if not line.strip() or line.strip().startswith("//") or line.strip().startswith("/*"):
+                    stripped_line = line.strip()
+                    if not stripped_line:
+                        continue
+                    if stripped_line.startswith("/*"):
+                        in_multiline_comment = True
+                    if in_multiline_comment:
+                        if "*/" in stripped_line:
+                            in_multiline_comment = False
+                        continue
+                    if stripped_line.startswith("//"):
                         continue
 
                     if "\t" in line:
                         logging.warning(f"Indentation issue at line {line_number}: TAB space used. Convert TABs to spaces.")
                         self.counts['indentation_check'] += 1
 
-                    if "{" in line and not line.strip().endswith("{"):
+                    if "{" in line and not line.split("//")[0].strip().endswith("{"):
                         logging.warning(f"Brace placement issue at line {line_number}: Opening brace should be on the same line as the control statement.")
                         self.counts['indentation_check'] += 1
 
@@ -267,50 +286,50 @@ class ScriptAnalyzer:
                     # Check for symbols prefix corresponding to all module names
                     for module in MODULES_ALL:
                         if line.startswith(module + "::"):
-                            logging.warning(f"Symbol with prefix '{module}::' found at line {line_number}")
+                            logging.warning(f"Symbol with prefix '{module}::': found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
                     # Check for lower-case variables/functions with reserved data types
                     if re.match(r'^\s*(?:' + '|'.join(reserved_names) + r')\s+[a-z_]\w*\s*;', line.strip()):
                         # Check if the variable or function name is not in lowercase
                         if not re.match(r'^\s*(?:' + '|'.join(reserved_names) + r')\s+[a-z_]\w*\s*;', line.strip()):
-                            logging.warning(f"Variable/function not starting with lower-case letter found at line {line_number}")
+                            logging.warning(f"Variable/function not starting with lower-case letter: found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
                     # Check for upper-case types/classes
                     if re.match(r'\b(class|struct|enum|union|namespace)\s', line):
                         if not re.match(r'\b(class|struct|enum|union|namespace)\s+[A-Z]\w*\s+\w+(?:::\w+)?\s*{?$', line):
-                            logging.warning(f"class names not starting with Upper-Case letter found at line {line_number}")
+                            logging.warning(f"Class/Types names not starting with Upper-Case letter found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
                     
                     # Check for upper case type/class name or the TYPE keyword convention
                     if (re.search(r'\bTYPE\s', line) and re.search(r';\s*END\s+TYPE\s', line)):
                         if not (re.search(r'\bTYPE\s*\(\s*[a-zA-Z]+\s*\)\s*;', line) and re.search(r';\s*END\s+TYPE\s+[a-zA-Z]+\s*;', line)):
-                            logging.warning(f"TYPE keyword not starting with Upper-Case letter found at line {line_number}")
+                            logging.warning(f"TYPE keyword not starting with Upper-Case letter: found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
                     # Check for upper-case constants
                     if re.match(r'^#define\s+[A-Z_]+\s+', line):
-                        if re.match(r'#define [A-Z_]+ .*', line):
-                            logging.warning(f"Constant not all upper-case found at line {line_number}")
+                        if not re.match(r'#define [A-Z_]+ .*', line):
+                            logging.warning(f"Constant used is not in Upper-Case: found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
                     # Check for global variables starting with 'g_'
                     if re.match(r'\b(g_[a-zA-Z_]\w*)\b', line):
-                        logging.warning(f"Global variable not starting with 'g_' found at line {line_number}")
+                        logging.warning(f"Global variable not starting with 'g_': found at line {line_number}")
                         self.counts['naming_conventions_check'] += 1
 
                     # Check for members starting with 'm_'
                     if re.match(r'(\w+)::\1', line):
                         if not re.match(r'(\w+)::\1\s*\((.*?)\)\s*:\s*\w+\s*\([^)]*\)\s*(?:...).*m_\w+\s*\([^)]*\)*\s*{', line):
-                            logging.warning(f"Member not starting with 'm_' found at line {line_number}")
+                            logging.warning(f"Member not starting with 'm_': found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
                     # Check for pointers starting with 'p'
                     for match in re.finditer(r'(?<!/)\*\s*\w+', line):
                         word = match.group()[1:].lstrip()
                         if not word.startswith('p'):
-                            logging.warning(f"Pointer not starting with 'p', word: '{word}' and found at line {line_number}")
+                            logging.warning(f"Pointer {word} is not starting with the letter 'p': found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
 
             logging.info(f"Naming conventions check completed - Count: {self.counts['naming_conventions_check']}")
@@ -445,8 +464,8 @@ class ScriptAnalyzer:
 
             for line_number, line in enumerate(lines, start=1):
                 stripped_line = line.strip()
-                if stripped_line and re.search(r'\\s{2,}', stripped_line):
-                    logging.warning(f"Excess whitespace detected: Line {line_number} '{stripped_line}' has more than one space between words.")
+                if re.search(r'\\s{2,}', stripped_line):
+                    logging.warning(f"Excess whitespace detected: Line {line_number} '{stripped_line}' has more than one space.")
                     self.counts['excess_whitespace_check'] += 1
 
             logging.info(f"Excess whitespace check completed - Count: {self.counts['excess_whitespace_check']}")
