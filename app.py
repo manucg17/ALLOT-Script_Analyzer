@@ -11,8 +11,8 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'Uploa
 ALLOWED_EXTENSIONS = {'cpp'}
 
 # Set global configuration values
-sender_email = 'manu.m@thinkpalm.com'
-sender_password = 'civiC@3547'
+sender_email = 'scriptanalyzer_qa@thinkpalm.com'
+sender_password = 'Scriptanalyzer@321'
 SMTP_SERVER = 'smtp-mail.outlook.com'
 SMTP_PORT = 587
 
@@ -63,4 +63,4 @@ def upload_file():
         return redirect(request.url)
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=80, debug=True)

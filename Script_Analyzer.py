@@ -298,8 +298,8 @@ class ScriptAnalyzer:
 
                     # Check for upper-case types/classes
                     if re.match(r'\b(class|struct|enum|union|namespace)\s', line):
-                        if not re.match(r'\b(class|struct|enum|union|namespace)\s+[A-Z]\w*\s+\w+(?:::\w+)?\s*{?$', line):
-                            logging.warning(f"Class/Types names not starting with Upper-Case letter found at line {line_number}")
+                        if not re.match(r'\b(?:class|struct|enum|union|namespace)\s+[A-Z]\w*\s*(?:::\w+)*\s*{\s*$', line):
+                            logging.warning(f"Class/Types names is not starting with Upper-Case letter: found at line {line_number}")
                             self.counts['naming_conventions_check'] += 1
                     
                     # Check for upper case type/class name or the TYPE keyword convention
